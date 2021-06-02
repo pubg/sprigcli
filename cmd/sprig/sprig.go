@@ -18,12 +18,13 @@ import (
 var Version = "unknown"
 
 type sprigCommand struct {
-	valueFiles valueFiles
-	envValues  bool
-	dryRun     bool
-	version    bool
-	values     []string
-	target     string
+	valueFiles    valueFiles
+	stdInTemplate bool
+	envValues     bool
+	dryRun        bool
+	version       bool
+	values        []string
+	target        string
 }
 
 func NewSprigCmd() *cobra.Command {
@@ -33,14 +34,23 @@ func NewSprigCmd() *cobra.Command {
 		Use:   "sprig",
 		Short: "A CLI for golang text/template processing",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 1 {
+			if sprigCmd.stdInTemplate {
+				if len(args) > 0 {
+					return fmt.Errorf("you must provide template from stdin when using stdin mode")
+				}
+			} else {
+				if len(args) > 1 {
+					return fmt.Errorf("too many parameters, you must provide only one template file")
+				}
+				if len(args) == 0 {
+					return fmt.Errorf("there are no parameters, you must provide one template file")
+				}
 				sprigCmd.target = args[0]
-			} else if len(args) > 1 {
-				return fmt.Errorf("must provide only one file to template")
 			}
 			return sprigCmd.run()
 		},
 	}
+	sprigCLI.Flags().BoolVar(&sprigCmd.stdInTemplate, "stdin", false, "read template use stdin")
 	sprigCLI.Flags().BoolVar(&sprigCmd.envValues, "env", false, "pull template values from the environment")
 	sprigCLI.Flags().BoolVar(&sprigCmd.version, "version", false, "print version and exit")
 	sprigCLI.Flags().VarP(&sprigCmd.valueFiles, "values", "f", "specify values in YAML file (can specify multiple, comma separated)")
@@ -117,8 +127,12 @@ func (i *sprigCommand) run() error {
 	}
 
 	var r io.Reader
-	if shouldReadStdin() {
-		r = os.Stdin
+	if i.stdInTemplate {
+		if shouldReadStdin() {
+			r = os.Stdin
+		} else {
+			return fmt.Errorf("stdinTemplate option is enabled, but pipe is not open")
+		}
 	} else {
 		if i.target == "" {
 			return fmt.Errorf("must provide a file to template")
