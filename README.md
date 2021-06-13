@@ -4,6 +4,7 @@
 Sprig CLI provides a CLI for Go's `text/template` with the [sprig](https://github.com/Masterminds/sprig) convenience functions available.
 
 # 왜 포크떴나요?
+(Why did you fork?)
 
 원본 레포지토리가 오랫동안 관리되지 않아 최신 Sprig Function을 사용할 수 없었습니다.
 
